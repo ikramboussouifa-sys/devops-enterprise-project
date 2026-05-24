@@ -3,10 +3,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "ikramboussouifa-sys/devops-api"
         IMAGE_TAG = "1.0.${BUILD_NUMBER}"
-
-        // test database connection (used by pytest)
         DATABASE_URL = "postgresql://postgres:DevOps123!@test-postgres:5432/devopsdb"
     }
 
@@ -34,6 +31,8 @@ pipeline {
             steps {
                 sh '''
                 docker rm -f test-postgres || true
+
+                docker network ls | grep devops-enterprise-project_default || docker network create devops-enterprise-project_default
 
                 docker run -d \
                   --name test-postgres \
@@ -68,21 +67,27 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                sh '''
-                docker build -t $IMAGE_NAME:$IMAGE_TAG .
-                '''
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+
+                    sh '''
+                    export IMAGE_NAME=$DOCKER_USER/devops-api
+                    docker build -t $IMAGE_NAME:$IMAGE_TAG .
+                    '''
+                }
             }
         }
 
         stage('Docker Login') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
 
                     sh '''
                     echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
@@ -93,9 +98,17 @@ pipeline {
 
         stage('Docker Push') {
             steps {
-                sh '''
-                docker push $IMAGE_NAME:$IMAGE_TAG
-                '''
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+
+                    sh '''
+                    export IMAGE_NAME=$DOCKER_USER/devops-api
+                    docker push $IMAGE_NAME:$IMAGE_TAG
+                    '''
+                }
             }
         }
     }
