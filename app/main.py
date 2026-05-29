@@ -24,10 +24,6 @@ ENDPOINT = "/users"
 def root():
     return {"message": "API is running"}
 
-@app.get("/")
-def root():
-    return {"message": "API is running"}
-
 
 @app.post(ENDPOINT, response_model=UserResponse)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
