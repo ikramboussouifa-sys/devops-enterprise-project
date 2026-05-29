@@ -18,17 +18,22 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="DevOps Enterprise API")
 
+ENDPOINT = "/users"
+
+@app.get("/")
+def root():
+    return {"message": "API is running"}
 
 @app.get("/")
 def root():
     return {"message": "API is running"}
 
 
-@app.post("/users", response_model=UserResponse)
+@app.post(ENDPOINT, response_model=UserResponse)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    REQUEST_COUNT.labels(method="POST", endpoint="/users").inc()
+    REQUEST_COUNT.labels(method="POST", endpoint=ENDPOINT).inc()
 
-    with REQUEST_LATENCY.labels(endpoint="/users").time():
+    with REQUEST_LATENCY.labels(endpoint=ENDPOINT).time():
         db_user = User(
             name=user.name,
             email=user.email
@@ -43,11 +48,11 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         return db_user
 
 
-@app.get("/users")
+@app.get(ENDPOINT)
 def get_users(db: Session = Depends(get_db)):
-    REQUEST_COUNT.labels(method="GET", endpoint="/users").inc()
+    REQUEST_COUNT.labels(method="GET", endpoint=ENDPOINT).inc()
 
-    with REQUEST_LATENCY.labels(endpoint="/users").time():
+    with REQUEST_LATENCY.labels(endpoint=ENDPOINT).time():
         users = db.query(User).all()
 
         return users
