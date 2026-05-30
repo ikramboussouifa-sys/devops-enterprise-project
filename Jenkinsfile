@@ -61,26 +61,18 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonarqube') {
-                    sh '''
-                    . venv/bin/activate
-
-                    sonar-scanner \
-                      -Dsonar.projectKey=devops-api \
-                      -Dsonar.projectName=devops-api \
-                      -Dsonar.sources=. \
-                      -Dsonar.python.version=3
-                    '''
                 script {
                     def scannerHome = tool 'sonar-scanner'
-
                     withSonarQubeEnv('sonarqube') {
                         sh """
                         . venv/bin/activate
-                        ${scannerHome}/bin/sonar-scanner
+                        ${scannerHome}/bin/sonar-scanner \
+                          -Dsonar.projectKey=devops-api \
+                          -Dsonar.projectName=devops-api \
+                          -Dsonar.sources=. \
+                          -Dsonar.python.version=3
                         """
                     }
-76ab387b9447fe9d974893a78ced932630e5bc11
                 }
             }
         }
