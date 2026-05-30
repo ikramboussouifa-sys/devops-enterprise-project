@@ -62,9 +62,7 @@ pipeline {
                 )]) {
                     sh '''
                     . venv/bin/activate
-
                     export DATABASE_URL="postgresql://$DB_USER:$DB_PASS@test-postgres:5432/devopsdb"
-
                     pytest
                     '''
                 }
@@ -75,7 +73,6 @@ pipeline {
             steps {
                 script {
                     def scannerHome = tool 'sonar-scanner'
-
                     withSonarQubeEnv('sonarqube') {
                         sh """
                         . venv/bin/activate
@@ -94,14 +91,6 @@ pipeline {
             }
         }
 
-        stage('Stop Test DB') {
-            steps {
-                sh '''
-                docker rm -f test-postgres || true
-                '''
-            }
-        }
-
         stage('Docker Build') {
             steps {
                 withCredentials([usernamePassword(
@@ -110,26 +99,10 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                    IMAGE_NAME=$DOCKER_USER/devops-api
-
                     docker build \
-                      -t $IMAGE_NAME:$IMAGE_TAG \
-                      -t $IMAGE_NAME:latest \
+                      -t $DOCKER_USER/devops-api:$IMAGE_TAG \
+                      -t $DOCKER_USER/devops-api:latest \
                       .
-                    '''
-                }
-            }
-        }
-
-        stage('Docker Login') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                     '''
                 }
             }
@@ -142,12 +115,13 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh '''
-                    IMAGE_NAME=$DOCKER_USER/devops-api
-
-                    docker push $IMAGE_NAME:$IMAGE_TAG
-                    docker push $IMAGE_NAME:latest
-                    '''
+                    retry(3) {
+                        sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push $DOCKER_USER/devops-api:$IMAGE_TAG
+                        docker push $DOCKER_USER/devops-api:latest
+                        '''
+                    }
                 }
             }
         }
@@ -155,9 +129,7 @@ pipeline {
 
     post {
         always {
-            sh '''
-            docker rm -f test-postgres || true
-            '''
+            sh 'docker rm -f test-postgres || true'
         }
     }
 }
