@@ -61,6 +61,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
+<<<<<<< HEAD
                 withSonarQubeEnv('sonarqube') {
                     sh '''
                     . venv/bin/activate
@@ -71,6 +72,17 @@ pipeline {
                       -Dsonar.sources=. \
                       -Dsonar.python.version=3
                     '''
+=======
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+
+                    withSonarQubeEnv('sonarqube') {
+                        sh """
+                        . venv/bin/activate
+                        ${scannerHome}/bin/sonar-scanner
+                        """
+                    }
+>>>>>>> 76ab387b9447fe9d974893a78ced932630e5bc11
                 }
             }
         }
