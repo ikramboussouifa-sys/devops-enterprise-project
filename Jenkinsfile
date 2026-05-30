@@ -4,7 +4,8 @@ pipeline {
 
     environment {
         IMAGE_TAG = "1.0.${BUILD_NUMBER}"
-        DATABASE_URL = "postgresql://postgres:DevOps123!@test-postgres:5432/devopsdb"
+        DB_CREDENTIALS = credentials('postgres-db-creds')
+        DATABASE_URL = "postgresql://${DB_CREDENTIALS_USR}:${DB_CREDENTIALS_PSW}@test-postgres:5432/devopsdb"
     }
 
     stages {
@@ -12,8 +13,8 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'develop',
-                credentialsId: 'github-ssh',
-                url: 'git@github.com:ikramboussouifa-sys/devops-enterprise-project.git'
+                    credentialsId: 'github-ssh',
+                    url: 'git@github.com:ikramboussouifa-sys/devops-enterprise-project.git'
             }
         }
 
@@ -32,17 +33,18 @@ pipeline {
                 sh '''
                 docker rm -f test-postgres || true
 
-                docker network ls | grep devops-enterprise-project_default || docker network create devops-enterprise-project_default
+                docker network ls | grep devops-enterprise-project_default || \
+                docker network create devops-enterprise-project_default
 
                 docker run -d \
                   --name test-postgres \
                   --network devops-enterprise-project_default \
                   -e POSTGRES_DB=devopsdb \
-                  -e POSTGRES_USER=postgres \
-                  -e POSTGRES_PASSWORD=DevOps123! \
+                  -e POSTGRES_USER=$DB_CREDENTIALS_USR \
+                  -e POSTGRES_PASSWORD=$DB_CREDENTIALS_PSW \
                   postgres:17
 
-                sleep 5
+                sleep 10
                 '''
             }
         }
@@ -54,6 +56,30 @@ pipeline {
                 export DATABASE_URL=$DATABASE_URL
                 pytest
                 '''
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonarqube') {
+                    sh '''
+                    . venv/bin/activate
+
+                    sonar-scanner \
+                      -Dsonar.projectKey=devops-api \
+                      -Dsonar.projectName=devops-api \
+                      -Dsonar.sources=. \
+                      -Dsonar.python.version=3
+                    '''
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
 
@@ -72,7 +98,6 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-
                     sh '''
                     export IMAGE_NAME=$DOCKER_USER/devops-api
                     docker build -t $IMAGE_NAME:$IMAGE_TAG .
@@ -88,7 +113,6 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-
                     sh '''
                     echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                     '''
@@ -103,7 +127,6 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-
                     sh '''
                     export IMAGE_NAME=$DOCKER_USER/devops-api
                     docker push $IMAGE_NAME:$IMAGE_TAG
