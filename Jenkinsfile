@@ -44,7 +44,7 @@ pipeline {
                   -e POSTGRES_PASSWORD=$DB_CREDENTIALS_PSW \
                   postgres:17
 
-                sleep 10
+                sleep 20
                 '''
             }
         }
