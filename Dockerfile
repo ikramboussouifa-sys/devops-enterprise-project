@@ -1,14 +1,19 @@
-FROM python:3.14-slim AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 WORKDIR /app
+
+RUN apt-get update && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --user -r requirements.txt
 
-FROM python:3.14-slim
+
+FROM python:3.14-slim-bookworm
 
 WORKDIR /app
+
+RUN apt-get update && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m appuser
 
