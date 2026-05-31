@@ -1,4 +1,4 @@
-FROM python:3.14-slim-bookworm AS builder
+FROM python:3.9-slim AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 
-FROM python:3.14-slim-bookworm
+FROM python:3.9-slim
 
 WORKDIR /app
 
