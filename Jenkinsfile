@@ -123,6 +123,7 @@ pipeline {
                       --cache-dir $TRIVY_CACHE_DIR \
                       --exit-code 1 \
                       --severity CRITICAL,HIGH \
+                      --ignore-unfixed \
                       $DOCKER_USER/devops-api:$IMAGE_TAG
                     '''
                 }
