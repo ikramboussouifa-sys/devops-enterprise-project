@@ -9,4 +9,8 @@ CVE-2026-9538
 
 # starlette - fix incompatible with fastapi==0.115.12
 CVE-2025-62727
+
+# No fix available - Debian base image
+CVE-2025-7458
+CVE-2023-45853
 EOF
