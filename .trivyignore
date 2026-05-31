@@ -1,0 +1,12 @@
+cat > .trivyignore << 'EOF'
+# No fix available - OS level vulnerabilities
+CVE-2025-69720
+CVE-2026-42496
+CVE-2026-8376
+CVE-2026-42497
+CVE-2026-48962
+CVE-2026-9538
+
+# starlette - fix incompatible with fastapi==0.115.12
+CVE-2025-62727
+EOF

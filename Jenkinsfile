@@ -1,11 +1,14 @@
 pipeline {
+<<<<<<< HEAD
 
     agent any
+=======
+>>>>>>> 29977a3 (fix: add trivy scanner in Jenkinsfile)
 
-    environment {
-        IMAGE_TAG = "1.0.${BUILD_NUMBER}"
-        TRIVY_CACHE_DIR = "/tmp/trivy-cache"
-    }
+environment {
+    IMAGE_TAG = "1.0.${BUILD_NUMBER}"
+    TRIVY_CACHE_DIR = "/tmp/trivy-cache"
+}
 
     stages {
 
