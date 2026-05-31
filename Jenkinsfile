@@ -124,6 +124,8 @@ pipeline {
                       --exit-code 1 \
                       --severity CRITICAL,HIGH \
                       --ignore-unfixed \
+                      --format json \
+                      --output trivy-report.json \
                       $DOCKER_USER/devops-api:$IMAGE_TAG
                     '''
                 }
@@ -153,6 +155,7 @@ pipeline {
     post {
         always {
             sh 'docker rm -f test-postgres || true'
+            archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
         }
     }
 }
