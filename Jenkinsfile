@@ -1,9 +1,11 @@
 pipeline {
 
-environment {
-    IMAGE_TAG = "1.0.${BUILD_NUMBER}"
-    TRIVY_CACHE_DIR = "/tmp/trivy-cache"
-}
+    agent any
+
+    environment {
+        IMAGE_TAG = "1.0.${BUILD_NUMBER}"
+        TRIVY_CACHE_DIR = "/tmp/trivy-cache"
+    }
 
     stages {
 
@@ -41,6 +43,7 @@ environment {
                     docker run -d \
                       --name test-postgres \
                       --network devops-enterprise-project_default \
+                      -p 5432:5432 \
                       -e POSTGRES_DB=devopsdb \
                       -e POSTGRES_USER=$DB_USER \
                       -e POSTGRES_PASSWORD=$DB_PASS \
@@ -61,7 +64,7 @@ environment {
                 )]) {
                     sh '''
                     . venv/bin/activate
-                    export DATABASE_URL="postgresql://$DB_USER:$DB_PASS@test-postgres:5432/devopsdb"
+                    export DATABASE_URL="postgresql://$DB_USER:$DB_PASS@localhost:5432/devopsdb"
                     pytest
                     '''
                 }
@@ -108,16 +111,23 @@ environment {
         }
 
         stage('Trivy Security Scan') {
-             steps {
-             sh '''
-             trivy image \
-              --exit-code 1 \
-              --severity CRITICAL,HIGH \
-              --ignorefile .trivyignore \
-              $DOCKER_USER/devops-api:$IMAGE_TAG
-            '''
-         }
-    }
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                    trivy image \
+                      --exit-code 1 \
+                      --severity CRITICAL,HIGH \
+                      --ignorefile .trivyignore \
+                      $DOCKER_USER/devops-api:$IMAGE_TAG
+                    '''
+                }
+            }
+        }
+
         stage('Docker Push') {
             steps {
                 withCredentials([usernamePassword(
