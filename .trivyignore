@@ -1,6 +1,5 @@
-# zlib1g - Debian 12 marked will_not_fix (no patch planned)
-CVE-2023-45853
-# CVE sans fix disponible dans l'image de base Debian
+cat > .trivyignore << 'EOF'
+# No fix available - OS level vulnerabilities
 CVE-2025-69720
 CVE-2026-42496
 CVE-2026-8376
@@ -8,5 +7,6 @@ CVE-2026-42497
 CVE-2026-48962
 CVE-2026-9538
 
-# starlette CVE-2025-62727 - fix (0.49.1) incompatible avec fastapi (contrainte starlette<0.47.0)
+# starlette - fix incompatible with fastapi==0.115.12
 CVE-2025-62727
+EOF
