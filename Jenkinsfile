@@ -4,6 +4,7 @@ pipeline {
 
     environment {
         IMAGE_TAG = "1.0.${BUILD_NUMBER}"
+        TRIVY_CACHE_DIR = "/tmp/trivy-cache"
     }
 
     stages {
@@ -103,6 +104,23 @@ pipeline {
                       -t $DOCKER_USER/devops-api:$IMAGE_TAG \
                       -t $DOCKER_USER/devops-api:latest \
                       .
+                    '''
+                }
+            }
+        }
+
+        stage('Trivy Security Scan') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                    trivy image \
+                      --exit-code 1 \
+                      --severity CRITICAL,HIGH \
+                      $DOCKER_USER/devops-api:$IMAGE_TAG
                     '''
                 }
             }
