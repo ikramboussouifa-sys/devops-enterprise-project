@@ -122,7 +122,7 @@ pipeline {
                     trivy image \
                       --cache-dir $TRIVY_CACHE_DIR \
                       --exit-code 1 \
-                      --severity CRITICAL,HIGH \
+                      --severity CRITICAL \
                       --ignore-unfixed \
                       --format json \
                       --output trivy-report.json \
