@@ -1,10 +1,9 @@
 pipeline {
-    agent any
 
-    environment {
-        IMAGE_TAG = "1.0.${BUILD_NUMBER}"
-        TRIVY_CACHE_DIR = "/tmp/trivy-cache"
-    }
+environment {
+    IMAGE_TAG = "1.0.${BUILD_NUMBER}"
+    TRIVY_CACHE_DIR = "/tmp/trivy-cache"
+}
 
     stages {
 
@@ -73,7 +72,6 @@ pipeline {
             steps {
                 script {
                     def scannerHome = tool 'sonar-scanner'
-
                     withSonarQubeEnv('sonarqube') {
                         sh """
                         . venv/bin/activate
@@ -117,15 +115,9 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                    mkdir -p $TRIVY_CACHE_DIR
-
                     trivy image \
-                      --cache-dir $TRIVY_CACHE_DIR \
                       --exit-code 1 \
-                      --severity CRITICAL \
-                      --ignore-unfixed \
-                      --format json \
-                      --output trivy-report.json \
+                      --severity CRITICAL,HIGH \
                       $DOCKER_USER/devops-api:$IMAGE_TAG
                     '''
                 }
@@ -142,7 +134,6 @@ pipeline {
                     retry(3) {
                         sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-
                         docker push $DOCKER_USER/devops-api:$IMAGE_TAG
                         docker push $DOCKER_USER/devops-api:latest
                         '''
@@ -155,7 +146,6 @@ pipeline {
     post {
         always {
             sh 'docker rm -f test-postgres || true'
-            archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
         }
     }
 }
