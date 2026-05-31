@@ -43,7 +43,7 @@ pipeline {
                     docker run -d \
                       --name test-postgres \
                       --network devops-enterprise-project_default \
-                      -p 5432:5432 \
+                      -p 15432:5432 \
                       -e POSTGRES_DB=devopsdb \
                       -e POSTGRES_USER=$DB_USER \
                       -e POSTGRES_PASSWORD=$DB_PASS \
@@ -64,7 +64,7 @@ pipeline {
                 )]) {
                     sh '''
                     . venv/bin/activate
-                    export DATABASE_URL="postgresql://$DB_USER:$DB_PASS@localhost:5432/devopsdb"
+                    export DATABASE_URL="postgresql://$DB_USER:$DB_PASS@localhost:15432/devopsdb"
                     pytest
                     '''
                 }
