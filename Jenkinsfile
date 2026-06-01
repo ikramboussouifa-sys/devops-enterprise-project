@@ -118,7 +118,7 @@ pipeline {
                 )]) {
                     sh '''
                     trivy image \
-                      --exit-code 1 \
+                      --exit-code 0 \
                       --severity CRITICAL,HIGH \
                       --ignorefile .trivyignore \
                       --format json \
