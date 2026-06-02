@@ -3,12 +3,18 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_TAG = "1.0.${BUILD_NUMBER}"
-        TRIVY_CACHE_DIR = "/tmp/trivy-cache"
+        IMAGE_TAG        = "1.0.${BUILD_NUMBER}"
+        TRIVY_CACHE_DIR  = "/tmp/trivy-cache"
+        K8S_NAMESPACE    = "devops"
+        DEPLOYMENT_NAME  = "devops-api"
+        CONTAINER_NAME   = "devops-api"
     }
 
     stages {
 
+        // ─────────────────────────────────────────────
+        // 1. SOURCE
+        // ─────────────────────────────────────────────
         stage('Checkout') {
             steps {
                 git branch: 'develop',
@@ -17,6 +23,9 @@ pipeline {
             }
         }
 
+        // ─────────────────────────────────────────────
+        // 2. BUILD
+        // ─────────────────────────────────────────────
         stage('Install Dependencies') {
             steps {
                 sh '''
@@ -54,6 +63,9 @@ pipeline {
             }
         }
 
+        // ─────────────────────────────────────────────
+        // 3. TESTS
+        // ─────────────────────────────────────────────
         stage('Run Tests') {
             steps {
                 withCredentials([usernamePassword(
@@ -70,6 +82,9 @@ pipeline {
             }
         }
 
+        // ─────────────────────────────────────────────
+        // 4. QUALITE CODE
+        // ─────────────────────────────────────────────
         stage('SonarQube Analysis') {
             steps {
                 script {
@@ -92,6 +107,9 @@ pipeline {
             }
         }
 
+        // ─────────────────────────────────────────────
+        // 5. IMAGE DOCKER
+        // ─────────────────────────────────────────────
         stage('Docker Build') {
             steps {
                 withCredentials([usernamePassword(
@@ -121,6 +139,7 @@ pipeline {
                       --exit-code 1 \
                       --severity CRITICAL \
                       --ignorefile .trivyignore \
+                      --cache-dir $TRIVY_CACHE_DIR \
                       --format json \
                       --output trivy-report.json \
                       $DOCKER_USER/devops-api:$IMAGE_TAG
@@ -146,12 +165,68 @@ pipeline {
                 }
             }
         }
+
+        // ─────────────────────────────────────────────
+        // 6. DEPLOY KUBERNETES
+        // ─────────────────────────────────────────────
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    ),
+                    usernamePassword(
+                        credentialsId: 'postgres-db-creds',
+                        usernameVariable: 'DB_USER',
+                        passwordVariable: 'DB_PASS'
+                    )
+                ]) {
+                    sh '''
+                    # 1. Namespace
+                    kubectl get namespace $K8S_NAMESPACE || \
+                    kubectl create namespace $K8S_NAMESPACE
+
+                    # 2. Secret DB (upsert)
+                    kubectl create secret generic devops-api-secret \
+                      --namespace=$K8S_NAMESPACE \
+                      --from-literal=DATABASE_URL="postgresql://$DB_USER:$DB_PASS@postgres-service:5432/devopsdb" \
+                      --dry-run=client -o yaml | kubectl apply -f -
+
+                    # 3. Appliquer les manifests (image tag fixe dans deployment.yaml)
+                    kubectl apply -f k8s/deployment.yaml --namespace=$K8S_NAMESPACE
+                    kubectl apply -f k8s/service.yaml    --namespace=$K8S_NAMESPACE
+
+                    # 4. Mettre à jour l'image avec le tag du build courant — Fix S6596
+                    #    (le deployment.yaml reste propre avec un tag fixe pour SonarQube)
+                    kubectl set image deployment/$DEPLOYMENT_NAME \
+                      $CONTAINER_NAME=$DOCKER_USER/devops-api:$IMAGE_TAG \
+                      --namespace=$K8S_NAMESPACE
+
+                    # 5. Attendre que le rollout soit prêt (max 3 min)
+                    kubectl rollout status deployment/$DEPLOYMENT_NAME \
+                      --namespace=$K8S_NAMESPACE \
+                      --timeout=180s
+                    '''
+                }
+            }
+        }
     }
 
+    // ─────────────────────────────────────────────
+    // POST
+    // ─────────────────────────────────────────────
     post {
         always {
             sh 'docker rm -f test-postgres || true'
             archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
+        }
+        success {
+            echo "✅ Pipeline terminé — image déployée : ${env.DOCKER_USER}/devops-api:${env.IMAGE_TAG}"
+        }
+        failure {
+            echo "❌ Pipeline échoué — voir les logs ci-dessus"
         }
     }
 }

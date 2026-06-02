@@ -13,9 +13,10 @@ spec:
       labels:
         app: devops-api
     spec:
+      automountServiceAccountToken: false   # Fix S6865
       containers:
         - name: devops-api
-          image: abdelouahedait/devops-api:1.0
+          image: abdelouahedait/devops-api:1.0   # Fix S6596 : tag fixe — Jenkins fera kubectl set image
           ports:
             - containerPort: 8000
           env:
@@ -24,3 +25,24 @@ spec:
                 secretKeyRef:
                   name: devops-api-secret
                   key: DATABASE_URL
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+              ephemeral-storage: "256Mi"    # Fix S6897
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+              ephemeral-storage: "512Mi"    # Fix S6897
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 10
