@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-env
+  namespace: devops
+data:
+  .env.example: |
+    DATABASE_URL=postgresql://{{ .Values.db.user }}:{{ .Values.db.password }}@postgres:5432/{{ .Values.db.name }}
