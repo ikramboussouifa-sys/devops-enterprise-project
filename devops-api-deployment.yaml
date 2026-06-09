@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-api
+  namespace: devops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devops-api
+  template:
+    metadata:
+      labels:
+        app: devops-api
+    spec:
+      containers:
+        - name: api
+          image: abdelouahedait/devops-api:1.0
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          env:
+            - name: DATABASE_URL
+              value: postgresql://postgres:postgres123@postgres:5432/devopsdb
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: devops-api-secret
+                  key: SECRET_KEY

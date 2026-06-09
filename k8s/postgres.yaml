@@ -1,10 +1,16 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: PersistentVolumeClaim
 metadata:
-  name: postgres
+  name: postgres-pvc
   namespace: devops
 spec:
-  replicas: 1apiVersion: apps/v1
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
@@ -18,17 +24,7 @@ spec:
     metadata:
       labels:
         app: postgres
-      annotations:
-        vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/role: "devops-role"
-        vault.hashicorp.com/agent-inject-secret-db: "secret/data/devops-api"
-        vault.hashicorp.com/agent-inject-template-db: |
-          {{- with secret "secret/data/devops-api" -}}
-          export DB_USER="{{ .Data.data.db_username }}"
-          export DB_PASS="{{ .Data.data.db_password }}"
-          {{- end }}
     spec:
-      serviceAccountName: vault-auth
       containers:
         - name: postgres
           image: postgres:17
@@ -45,15 +41,9 @@ spec:
             - name: POSTGRES_DB
               value: devopsdb
             - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: devops-api-secret
-                  key: DB_USER
+              value: postgres
             - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: devops-api-secret
-                  key: DB_PASS
+              value: postgres123
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
@@ -61,38 +51,6 @@ spec:
         - name: postgres-data
           persistentVolumeClaim:
             claimName: postgres-pvc
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-        - name: postgres
-          image: postgres:17
-          ports:
-            - containerPort: 5432
-          env:
-            - name: POSTGRES_DB
-              value: devopsdb
-            - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: devops-api-secret
-                  key: DB_USER
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: devops-api-secret
-                  key: DB_PASS
-          volumeMounts:
-            - name: postgres-data
-              mountPath: /var/lib/postgresql/data
-      volumes:
-        - name: postgres-data
-          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
