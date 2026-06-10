@@ -18,11 +18,9 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           ports:
             - containerPort: 8000
-          volumeMounts:
-            - name: env-file
-              mountPath: /app/.env.example
-              subPath: .env.example
-      volumes:
-        - name: env-file
-          configMap:
-            name: {{ .Release.Name }}-env
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-env
+                  key: DATABASE_URL
