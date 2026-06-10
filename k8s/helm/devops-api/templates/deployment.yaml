@@ -12,6 +12,10 @@ spec:
     metadata:
       labels:
         app: devops-api
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "devops-role"
+        vault.hashicorp.com/agent-inject-secret-db: "secret/data/devops-api"
     spec:
       containers:
         - name: api
