@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/ikramboussouifa-sys/devops-enterprise-project
-    targetRevision: main
+    targetRevision: develop
     path: k8s/helm/devops-api
   destination:
     server: https://kubernetes.default.svc
