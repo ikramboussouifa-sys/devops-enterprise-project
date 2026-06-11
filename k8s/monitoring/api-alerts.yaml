@@ -1,0 +1,17 @@
+﻿apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: api-alerts
+  namespace: monitoring
+spec:
+  groups:
+    - name: api.rules
+      rules:
+        - alert: HighErrorRate
+          expr: rate(http_requests_total{status="500"}[5m]) > 0.1
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High error rate on devops-api"
+            description: "More than 10% of requests returning 500 for 1 minute"
